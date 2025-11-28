@@ -4,7 +4,7 @@
    This version uses localStorage fallback. To enable a backend, set API_URL.
 */
 
-const API_URL = "https://coressorteio-1.onrender.com/"; // optional backend URL (leave empty for pure static)
+const API_URL = "https://coressorteio-1.onrender.com"; // optional backend URL (leave empty for pure static)
 const ADMIN_PASS = "123"; // change if desired (note: front-end password is public)
 const PARTICIPANTES = ["Sandy","Daiara","Simone","Manuela","Eduarda","Rosângela","Tatiele","Sthefane"];
 const ALL_COLORS = ['Rosa','Azul','Roxo','Verde','Amarelo','Preto','Vermelho','Branco'];
