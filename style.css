@@ -1,0 +1,17 @@
+:root{--bg:#0b1220;--card:#0f1726;--accent:#06b6d4;--muted:#9aa6b2}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:linear-gradient(180deg,#071029 0%, #081225 100%);color:#e6eef8}
+.wrap{max-width:720px;margin:20px auto;padding:18px}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:16px;box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+h1{margin:0 0 6px 0;font-size:20px}
+.lead{margin:0 0 12px 0;color:var(--muted);font-size:13px}
+.row{display:flex;gap:8px;align-items:center}
+input[type="text"]{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:inherit}
+button{padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+button.primary{background:var(--accent);color:#02121b}
+button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+.status{display:flex;justify-content:space-between;margin-top:12px;color:var(--muted);font-size:13px}
+.resultBox{height:120px;border-radius:10px;margin-top:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;border:2px dashed rgba(255,255,255,0.04)}
+.notice{margin:10px 0;padding:10px;border-radius:8px;background:rgba(0,0,0,0.25);font-size:13px;color:var(--muted)}
+.small{font-size:12px;color:var(--muted)}
+@media (max-width:480px){ .row{flex-direction:column} .resultBox{height:100px;font-size:18px} }

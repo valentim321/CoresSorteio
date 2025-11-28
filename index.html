@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sorteio de Cores — Grupo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="card" role="main" aria-live="polite">
+    <h1>Sorteio de Cores</h1>
+    <p class="lead">Digite seu nome e clique em "Sortear". Cada cor só pode ser sorteada uma vez (fallback localStorage).</p>
+
+    <div id="alertArea" class="notice" style="display:none"></div>
+
+    <div class="row">
+      <input id="nome" type="text" placeholder="Seu nome (ex: José)" aria-label="Nome"/>
+      <div style="min-width:120px">
+        <button id="drawBtn" class="primary">Sortear cor</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button id="resetBtn" class="ghost">Resetar (admin)</button>
+    </div>
+
+    <div class="resultBox" id="resultBox">Nenhuma cor sorteada ainda</div>
+
+    <div class="status">
+      <div id="restam">Restam: --</div>
+      <div id="contagem">Sorteados: -- / 8</div>
+    </div>
+
+    <p class="small" style="margin-top:12px">Config: <code id="cfgInfo"></code></p>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
