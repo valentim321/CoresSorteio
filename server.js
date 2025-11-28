@@ -1,69 +1,92 @@
-// server.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const axios = require("axios");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// -------------------------
-//   CONFIGURAÇÕES
-// -------------------------
-
-const CORES = ["Rosa","Azul","Roxo","Verde","Amarelo","Preto","Vermelho","Branco"];
+const BIN_ID = process.env.JSONBIN_BIN_ID;
+const API_KEY = process.env.JSONBIN_KEY;
 const ADMIN_PASS = process.env.ADMIN_PASS || "123";
 
-// Fallback local: lista de pessoas e cores
-let state = {
-  pessoas: []
-};
+// Cores disponíveis
+const ALL_COLORS = ["Rosa","Azul","Roxo","Verde","Amarelo","Preto","Vermelho","Branco"];
+let fallbackCoresData = []; // pessoas sorteadas
 
-// -------------------------
-//   ROTAS DA API
-// -------------------------
+// Função auxiliar para ler JSONBin (opcional)
+async function readJSONBin() {
+  if (!BIN_ID || !API_KEY) return { pessoas: [] };
+  const r = await axios.get(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+    headers: { "X-Master-Key": API_KEY }
+  });
+  return r.data.record || { pessoas: [] };
+}
 
-// GET → retorna o estado atual (para frontend)
-app.get("/state", (req, res) => {
-  res.json({ pessoas: state.pessoas });
+// Função auxiliar para salvar JSONBin (opcional)
+async function writeJSONBin(data) {
+  if (!BIN_ID || !API_KEY) return true;
+  await axios.put(`https://api.jsonbin.io/v3/b/${BIN_ID}`, data, {
+    headers: { "X-Master-Key": API_KEY, "Content-Type": "application/json" }
+  });
+  return true;
+}
+
+// ---------------------
+// ROTAS
+// ---------------------
+
+// Retorna estado atual
+app.get("/state", async (req, res) => {
+  try {
+    if (BIN_ID && API_KEY) {
+      const data = await readJSONBin();
+      fallbackCoresData = data.pessoas || [];
+    }
+    res.json({ pessoas: fallbackCoresData });
+  } catch {
+    res.json({ pessoas: fallbackCoresData });
+  }
 });
 
-// POST → sortear cor para um nome
-app.post("/draw", (req, res) => {
+// Sortear cor
+app.post("/draw", async (req, res) => {
   const nome = (req.body.nome || "").trim();
-  if (!nome) return res.status(400).json({ ok: false, mensagem: "Nome inválido." });
+  if (!nome) return res.status(400).json({ ok:false, mensagem:"Nome inválido." });
 
-  // verifica se já sorteou para esse nome
-  const existe = state.pessoas.find(p => p.nome.toLowerCase() === nome.toLowerCase());
-  if (existe) return res.json({ ok: true, mensagem: `${nome}, você já recebeu a cor ${existe.cor}`, cor: existe.cor });
+  // Evitar duplicados
+  if (fallbackCoresData.find(p => p.nome.toLowerCase() === nome.toLowerCase())) {
+    const cor = fallbackCoresData.find(p => p.nome.toLowerCase() === nome.toLowerCase()).cor;
+    return res.json({ ok:true, mensagem:`${nome}, você já recebeu: ${cor}`, cor });
+  }
 
-  // cores já usadas
-  const usadas = state.pessoas.map(p => p.cor);
-  const restantes = CORES.filter(c => !usadas.includes(c));
+  // Cores restantes
+  const usadas = fallbackCoresData.map(p => p.cor);
+  const restantes = ALL_COLORS.filter(c => !usadas.includes(c));
+  if (restantes.length === 0) return res.status(400).json({ ok:false, mensagem:"Todas as cores já foram sorteadas." });
 
-  if (restantes.length === 0) return res.json({ ok: false, mensagem: "Todas as cores já foram sorteadas." });
+  const sorteada = restantes[Math.floor(Math.random()*restantes.length)];
+  const pessoa = { nome, cor: sorteada, at: new Date().toISOString() };
+  fallbackCoresData.push(pessoa);
 
-  // sorteio aleatório
-  const sorteada = restantes[Math.floor(Math.random() * restantes.length)];
-  state.pessoas.push({ nome, cor: sorteada, at: new Date().toISOString() });
+  // Salvar no JSONBin se configurado
+  if (BIN_ID && API_KEY) await writeJSONBin({ pessoas: fallbackCoresData });
 
-  res.json({ ok: true, mensagem: `${nome}, sua cor é: ${sorteada}`, cor: sorteada });
+  res.json({ ok:true, nome, cor: sorteada, mensagem:`${nome}, sua cor é: ${sorteada}` });
 });
 
-// POST → resetar sorteio (admin)
-app.post("/reset", (req, res) => {
-  const senha = req.body.senha || "";
-  if (senha !== ADMIN_PASS) return res.json({ ok: false, mensagem: "Senha incorreta." });
-
-  state = { pessoas: [] };
-  res.json({ ok: true, mensagem: "Sorteio resetado!" });
+// Resetar sorteio
+app.post("/reset", async (req, res) => {
+  const senha = req.body.senha;
+  if (senha !== ADMIN_PASS) return res.json({ ok:false, mensagem:"Senha incorreta." });
+  fallbackCoresData = [];
+  if (BIN_ID && API_KEY) await writeJSONBin({ pessoas: [] });
+  res.json({ ok:true, mensagem:"Sorteio resetado!" });
 });
 
-// -------------------------
-//   INICIAR SERVIDOR
-// -------------------------
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("API rodando na porta " + PORT);
-});
+// ---------------------
+// INICIAR SERVIDOR
+// ---------------------
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log("API rodando na porta " + PORT));
