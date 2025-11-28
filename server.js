@@ -1,83 +1,69 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
-const axios = require("axios");
 const cors = require("cors");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Variáveis de ambiente obrigatórias
-const BIN_ID = process.env.JSONBIN_BIN_ID;
-const API_KEY = process.env.JSONBIN_KEY;
+// -------------------------
+//   CONFIGURAÇÕES
+// -------------------------
 
-// Fallback local caso a API esteja offline
-let fallbackCores = ["Rosa", "Azul", "Roxo", "Verde", "Amarelo", "Preto", "Vermelho", "Branco"];
+const CORES = ["Rosa","Azul","Roxo","Verde","Amarelo","Preto","Vermelho","Branco"];
+const ADMIN_PASS = process.env.ADMIN_PASS || "123";
+
+// Fallback local: lista de pessoas e cores
+let state = {
+  pessoas: []
+};
 
 // -------------------------
 //   ROTAS DA API
 // -------------------------
 
-// GET → Listar cores
-app.get("/cores", async (req, res) => {
-  try {
-    if (!BIN_ID || !API_KEY) {
-      console.warn("JSONBin não configurado. Usando fallback local.");
-      return res.json({ source: "fallback", cores: fallbackCores });
-    }
-
-    const response = await axios.get(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      headers: { "X-Master-Key": API_KEY }
-    });
-
-    const cores = response.data.record || fallbackCores;
-
-    res.json({ source: "jsonbin", cores });
-  } catch (err) {
-    console.warn("API inacessível — usando fallback local.");
-    res.json({ source: "fallback", cores: fallbackCores });
-  }
+// GET → retorna o estado atual (para frontend)
+app.get("/state", (req, res) => {
+  res.json({ pessoas: state.pessoas });
 });
 
-// POST → Salvar cores
-app.post("/cores", async (req, res) => {
-  const novasCores = req.body.cores;
+// POST → sortear cor para um nome
+app.post("/draw", (req, res) => {
+  const nome = (req.body.nome || "").trim();
+  if (!nome) return res.status(400).json({ ok: false, mensagem: "Nome inválido." });
 
-  if (!Array.isArray(novasCores)) {
-    return res.status(400).json({ error: "O campo 'cores' deve ser um array." });
-  }
+  // verifica se já sorteou para esse nome
+  const existe = state.pessoas.find(p => p.nome.toLowerCase() === nome.toLowerCase());
+  if (existe) return res.json({ ok: true, mensagem: `${nome}, você já recebeu a cor ${existe.cor}`, cor: existe.cor });
 
-  try {
-    if (!BIN_ID || !API_KEY) {
-      console.warn("JSONBin não configurado. Salvando no fallback.");
-      fallbackCores = novasCores;
-      return res.json({ source: "fallback", saved: true });
-    }
+  // cores já usadas
+  const usadas = state.pessoas.map(p => p.cor);
+  const restantes = CORES.filter(c => !usadas.includes(c));
 
-    await axios.put(
-      `https://api.jsonbin.io/v3/b/${BIN_ID}`,
-      novasCores,
-      {
-        headers: {
-          "X-Master-Key": API_KEY,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+  if (restantes.length === 0) return res.json({ ok: false, mensagem: "Todas as cores já foram sorteadas." });
 
-    res.json({ source: "jsonbin", saved: true });
-  } catch (err) {
-    console.warn("Erro ao salvar no JSONBin — salvando no fallback.");
-    fallbackCores = novasCores;
-    res.json({ source: "fallback", saved: true });
-  }
+  // sorteio aleatório
+  const sorteada = restantes[Math.floor(Math.random() * restantes.length)];
+  state.pessoas.push({ nome, cor: sorteada, at: new Date().toISOString() });
+
+  res.json({ ok: true, mensagem: `${nome}, sua cor é: ${sorteada}`, cor: sorteada });
+});
+
+// POST → resetar sorteio (admin)
+app.post("/reset", (req, res) => {
+  const senha = req.body.senha || "";
+  if (senha !== ADMIN_PASS) return res.json({ ok: false, mensagem: "Senha incorreta." });
+
+  state = { pessoas: [] };
+  res.json({ ok: true, mensagem: "Sorteio resetado!" });
 });
 
 // -------------------------
 //   INICIAR SERVIDOR
 // -------------------------
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("API rodando na porta " + PORT);
 });
